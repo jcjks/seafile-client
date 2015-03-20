@@ -98,6 +98,15 @@ ELSEIF (APPLE)
     SET(EXTRA_LIBS ${EXTRA_LIBS} ${COCOA_LIBRARY})
 ENDIF()
 
+## these files using c++11 features, don't enable it for qt4
+IF(APPLE AND USE_QT5)
+    SET(platform_specific_moc_headers src/finder-sync-host.h)
+    SET(platform_specific_sources ${platform_specific_sources}
+        src/finder-sync-listener.mm src/finder-sync-host.cpp)
+    SET_SOURCE_FILES_PROPERTIES(src/finder-sync-listener.mm
+        PROPERTIES COMPILE_FLAGS -fobjc-arc)
+ENDIF()
+
 ####################
 ###### BEGIN: QT configuration
 ####################
@@ -128,8 +137,12 @@ IF(USE_QT5)
     else()
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
     endif()
-    SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++11")
-    SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
+    # for OS X, we requires libc++ instead
+    if (APPLE)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+      SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++11")
+      SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
+    endif()
 ELSE()
     IF (BUILD_SHIBBOLETH_SUPPORT)
       SET(QtWebKit "QtWebKit")
@@ -703,6 +716,7 @@ IF(CMAKE_GENERATOR STREQUAL Xcode)
   SET(CMAKE_XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS "YES")
   SET(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
   SET(CMAKE_XCODE_ATTRIBUTE_GCC_ENABLE_PASCAL_STRINGS "NO")
+  SET(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "YES")
 ENDIF()
 
 SET(ARCHIVE_NAME ${CMAKE_PROJECT_NAME}-${PROJECT_VERSION})
