@@ -2,7 +2,6 @@
 #define SEAFILE_CLIENT_APPLET_H
 
 #include <QObject>
-#include "account.h"
 
 class Configurator;
 class DaemonManager;
