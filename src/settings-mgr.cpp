@@ -499,7 +499,7 @@ void SettingsManager::setFinderSyncExtension(bool enabled)
 {
     // if setting operation fails
     if (!FinderSyncExtensionHelper::setEnable(enabled)) {
-        seafApplet->warningBox(tr("Unable to enable Finder Sycn Extension\n"));
+        seafApplet->warningBox(tr("Unable to enable FinderSync Extension\n"));
         return;
     }
     finder_sync_extension_enabled_ = enabled;
