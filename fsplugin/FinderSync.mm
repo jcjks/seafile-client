@@ -161,9 +161,11 @@ FinderSyncClient *client_ = nullptr;
 - (NSMenu *)menuForMenuKind:(FIMenuKind)whichMenu {
   // Produce a menu for the extension.
   NSMenu *menu = [[NSMenu alloc] initWithTitle:@""];
-  [menu addItemWithTitle:@"Get Seafile Share Link"
-                  action:@selector(shareLinkAction:)
-           keyEquivalent:@""];
+  NSMenuItem *shareLinkItem = [menu addItemWithTitle:@"Get Seafile Share Link"
+                                              action:@selector(shareLinkAction:)
+                                       keyEquivalent:@""];
+  NSImage *seafileImage = [NSImage imageNamed:@"seafile.icns"];
+  [shareLinkItem setImage:seafileImage];
 
   return menu;
 }

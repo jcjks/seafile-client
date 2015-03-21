@@ -77,5 +77,7 @@ ADD_CUSTOM_COMMAND(TARGET seafile-finder-sync
   POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E remove -f ${TARGET_DIR} &&
   ${CMAKE_COMMAND} -E copy_directory ${BUILD_DIR} ${TARGET_DIR} &&
+  ${CMAKE_COMMAND} -E make_directory ${TARGET_DIR}/Contents/Resources &&
+  ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/../seafile.icns ${TARGET_DIR}/Contents/Resources/ &&
   ${CODESIGN} --force --sign ${CODESIGN_CERTIFICATE} --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/seafile-fsplugin.entitlements ${TARGET_DIR}
   )

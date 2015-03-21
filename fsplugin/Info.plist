@@ -8,6 +8,8 @@
 	<string>Seafile FinderSync</string>
 	<key>CFBundleExecutable</key>
 	<string>Seafile FinderSync</string>
+	<key>CFBundleIconFile</key>
+	<string>seafile</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.seafile.seafile-client.findersync</string>
 	<key>CFBundleInfoDictionaryVersion</key>
