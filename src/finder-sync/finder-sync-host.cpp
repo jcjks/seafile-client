@@ -1,4 +1,4 @@
-#include "finder-sync-host.h"
+#include "finder-sync/finder-sync-host.h"
 
 #include <vector>
 #include <mutex>

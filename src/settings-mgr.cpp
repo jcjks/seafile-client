@@ -13,6 +13,10 @@
 #include "utils/registry.h"
 #endif
 
+#ifdef HAVE_FINDER_SYNC_SUPPORT
+#include "finder-sync/finder-sync.h"
+#endif
+
 namespace {
 
 const char *kHideMainWindowWhenStarted = "hideMainWindowWhenStarted";
@@ -44,7 +48,9 @@ SettingsManager::SettingsManager()
       maxUploadRatio_(0),
       http_sync_enabled_(false),
       verify_http_sync_cert_disabled_(false),
-      use_proxy_type_(NoneProxy)
+      finder_sync_extension_enabled_(false),
+      use_proxy_type_(NoneProxy),
+      proxy_port_(0)
 {
 }
 
@@ -80,6 +86,7 @@ void SettingsManager::loadSettings()
     if (seafApplet->rpcClient()->seafileGetConfig("disable_verify_certificate", &str) >= 0)
         verify_http_sync_cert_disabled_ = (str == "true") ? true : false;
 
+    // reading proxy settings
     do {
         if (seafApplet->rpcClient()->seafileGetConfig("use_proxy", &str) < 0 ) {
             setProxy(NoneProxy);
@@ -126,6 +133,10 @@ void SettingsManager::loadSettings()
 
 
     autoStart_ = get_seafile_auto_start();
+
+#ifdef HAVE_FINDER_SYNC_SUPPORT
+    finder_sync_extension_enabled_ = FinderSyncExtensionHelper::isEnabled();
+#endif
 }
 
 void SettingsManager::setAutoSync(bool auto_sync)
@@ -471,3 +482,26 @@ void SettingsManager::setLastShibUrl(const QString& url)
     settings.endGroup();
 }
 #endif // HAVE_SHIBBOLETH_SUPPORT
+
+
+#ifdef HAVE_FINDER_SYNC_SUPPORT
+bool SettingsManager::getFinderSyncExtensionAvailable() const
+{
+    bool installed = FinderSyncExtensionHelper::isInstalled();
+    // if not installed, try to reinstall it
+    if (!installed) {
+        FinderSyncExtensionHelper::reinstall();
+        installed = FinderSyncExtensionHelper::isInstalled();
+    }
+    return installed;
+}
+void SettingsManager::setFinderSyncExtension(bool enabled)
+{
+    // if setting operation fails
+    if (!FinderSyncExtensionHelper::setEnable(enabled)) {
+        seafApplet->warningBox(tr("Unable to enable Finder Sycn Extension\n"));
+        return;
+    }
+    finder_sync_extension_enabled_ = enabled;
+}
+#endif

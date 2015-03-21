@@ -100,10 +100,12 @@ ENDIF()
 
 ## these files using c++11 features, don't enable it for qt4
 IF(APPLE AND USE_QT5)
-    SET(platform_specific_moc_headers src/finder-sync-host.h)
+    ADD_DEFINITIONS(-DHAVE_FINDER_SYNC_SUPPORT)
+    SET(platform_specific_moc_headers src/finder-sync/finder-sync-host.h)
     SET(platform_specific_sources ${platform_specific_sources}
-        src/finder-sync-listener.mm src/finder-sync-host.cpp)
-    SET_SOURCE_FILES_PROPERTIES(src/finder-sync-listener.mm
+        src/finder-sync/finder-sync.cpp src/finder-sync/finder-sync-listener.mm
+        src/finder-sync/finder-sync-host.cpp)
+    SET_SOURCE_FILES_PROPERTIES(src/finder-sync/finder-sync-listener.mm
         PROPERTIES COMPILE_FLAGS -fobjc-arc)
 ENDIF()
 

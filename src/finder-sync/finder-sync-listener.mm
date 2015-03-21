@@ -1,9 +1,9 @@
 #include <libkern/OSAtomic.h>
 #include <mach/mach.h>
-#import <Cocoa/Cocoa.h>
 
-#include "finder-sync-listener.h"
-#include "finder-sync-host.h"
+#import <Cocoa/Cocoa.h>
+#include "finder-sync/finder-sync-host.h"
+#include "finder-sync/finder-sync-listener.h"
 
 #if !__has_feature(objc_arc)
 #error this file must be built with ARC support
@@ -11,10 +11,6 @@
 
 @interface FinderSyncListener : NSObject <NSMachPortDelegate>
 @end
-
-namespace {
-NSString *const kFinderSyncMachPort = @"com.seafile.seafile-client.findersync.machport";
-};
 
 enum CommandType {
     GetWatchSet = 0,
@@ -38,17 +34,25 @@ struct mach_msg_watchdir_send_t {
     mach_msg_header_t header;
     watch_dir_t dirs[kWatchDirMax];
 };
+
 namespace {
-NSThread *finder_sync_listener_thread = nil;
+
+NSString *const kFinderSyncMachPort =
+    @"com.seafile.seafile-client.findersync.machport";
+
+// listener related
+NSThread *finder_sync_listener_thread_ = nil;
 // atomic value
-int32_t finder_sync_started = 0;
-FinderSyncListener *finder_sync_listener = nil;
+int32_t finder_sync_started_ = 0;
+FinderSyncListener *finder_sync_listener_ = nil;
 std::unique_ptr<FinderSyncHost> finder_sync_host_;
+
 } // anonymous namespace
 
 @interface FinderSyncListener ()
 @property(readwrite, nonatomic, strong) NSPort *listenerPort;
 @end
+
 @implementation FinderSyncListener
 - (instancetype)init {
     self = [super init];
@@ -67,8 +71,8 @@ std::unique_ptr<FinderSyncHost> finder_sync_host_;
         NSLog(@"mach error %s", mach_error_string(kr));
         kr = mach_port_mod_refs(mach_task_self(), port, MACH_PORT_RIGHT_RECEIVE, -1);
         if (kr != KERN_SUCCESS) {
-          NSLog(@"failed to deallocate mach port %@", kFinderSyncMachPort);
-          NSLog(@"mach error %s", mach_error_string(kr));
+            NSLog(@"failed to deallocate mach port %@", kFinderSyncMachPort);
+            NSLog(@"mach error %s", mach_error_string(kr));
         }
         return;
     }
@@ -80,8 +84,8 @@ std::unique_ptr<FinderSyncHost> finder_sync_host_;
       NSLog(@"mach error %s", mach_error_string(kr));
       kr = mach_port_mod_refs(mach_task_self(), port, MACH_PORT_RIGHT_RECEIVE, -1);
       if (kr != KERN_SUCCESS) {
-        NSLog(@"failed to deallocate mach port %@", kFinderSyncMachPort);
-        NSLog(@"mach error %s", mach_error_string(kr));
+          NSLog(@"failed to deallocate mach port %@", kFinderSyncMachPort);
+          NSLog(@"mach error %s", mach_error_string(kr));
       }
       NSLog(@"failed to allocate send right tp local mach port");
       return;
@@ -98,7 +102,7 @@ std::unique_ptr<FinderSyncHost> finder_sync_host_;
     NSLog(@"registered mach port");
     [self.listenerPort setDelegate:self];
     [runLoop addPort:self.listenerPort forMode:NSDefaultRunLoopMode];
-    while (finder_sync_started)
+    while (finder_sync_started_)
         [runLoop runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]];
     [self.listenerPort invalidate];
     NSLog(@"unregistered mach port");
@@ -115,10 +119,10 @@ std::unique_ptr<FinderSyncHost> finder_sync_host_;
 - (void)handleMachMessage:(void *)machMessage {
     mach_msg_command_rcv_t *msg = static_cast<mach_msg_command_rcv_t *>(machMessage);
     if (msg->header.msgh_size != sizeof(mach_msg_command_send_t)) {
-      NSLog(@"received msg with bad size %u from remote_port:%u",
-            msg->header.msgh_size, msg->header.msgh_remote_port);
-      mach_msg_destroy(&msg->header);
-      return;
+        NSLog(@"received msg with bad size %u from remote_port:%u",
+              msg->header.msgh_size, msg->header.msgh_remote_port);
+        mach_msg_destroy(&msg->header);
+        return;
     }
 
     switch (msg->command) {
@@ -140,7 +144,7 @@ std::unique_ptr<FinderSyncHost> finder_sync_host_;
     // generate reply
     mach_port_t port = msg->header.msgh_remote_port;
     if (!port) {
-      return;
+        return;
     }
     mach_msg_watchdir_send_t reply_msg;
     size_t count = finder_sync_host_->getWatchSet(reply_msg.dirs, kWatchDirMax);
@@ -154,9 +158,9 @@ std::unique_ptr<FinderSyncHost> finder_sync_host_;
     // send the reply
     kern_return_t kr = mach_msg_send(&reply_msg.header);
     if (kr != MACH_MSG_SUCCESS) {
-      NSLog(@"mach error %s", mach_error_string(kr));
-      NSLog(@"failed to send reply to remote mach port %u", port);
-      return;
+        NSLog(@"mach error %s", mach_error_string(kr));
+        NSLog(@"failed to send reply to remote mach port %u", port);
+        return;
     }
 
     // destroy
@@ -167,27 +171,32 @@ std::unique_ptr<FinderSyncHost> finder_sync_host_;
 @end
 
 void finderSyncListenerStart() {
-    if (!finder_sync_started) {
-        finder_sync_host_.reset(new FinderSyncHost);
+    if (!finder_sync_started_) {
         // this value is used in different threads
         // keep it in atomic and guarenteed by barrier for safety
-        OSAtomicIncrement32Barrier(&finder_sync_started);
-        finder_sync_listener = [[FinderSyncListener alloc] init];
-        finder_sync_listener_thread = [[NSThread alloc] initWithTarget:finder_sync_listener
-          selector:@selector(start) object:nil];
-        [finder_sync_listener_thread start];
+        OSAtomicIncrement32Barrier(&finder_sync_started_);
+
+        finder_sync_host_.reset(new FinderSyncHost);
+        finder_sync_listener_ = [[FinderSyncListener alloc] init];
+        finder_sync_listener_thread_ =
+            [[NSThread alloc] initWithTarget:finder_sync_listener_
+                                    selector:@selector(start)
+                                      object:nil];
+        [finder_sync_listener_thread_ start];
     }
 }
 
 void finderSyncListenerStop() {
-    if (finder_sync_started) {
+    if (finder_sync_started_) {
         // this value is used in different threads
         // keep it in atomic and guarenteed by barrier for safety
-        OSAtomicDecrement32Barrier(&finder_sync_started);
-        // tell finder_sync_listener to exit
-        [finder_sync_listener performSelector:@selector(stop)
-          onThread:finder_sync_listener_thread withObject:nil
-          waitUntilDone:NO];
+        OSAtomicDecrement32Barrier(&finder_sync_started_);
+
+        // tell finder_sync_listener_ to exit
+        [finder_sync_listener_ performSelector:@selector(stop)
+                                     onThread:finder_sync_listener_thread_
+                                   withObject:nil
+                                waitUntilDone:NO];
         finder_sync_host_.reset();
     }
 }
