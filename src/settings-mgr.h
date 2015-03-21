@@ -77,7 +77,7 @@ public:
 #endif // HAVE_SHIBBOLETH_SUPPORT
 
 #ifdef HAVE_FINDER_SYNC_SUPPORT
-    bool getFinderSyncExtension() const { return finder_sync_extension_enabled_; }
+    bool getFinderSyncExtension() const;
     bool getFinderSyncExtensionAvailable() const;
     void setFinderSyncExtension(bool enabled);
 #endif // HAVE_FINDER_SYNC_SUPPORT
@@ -101,7 +101,6 @@ private:
     unsigned int maxUploadRatio_;
     bool http_sync_enabled_;
     bool verify_http_sync_cert_disabled_;
-    bool finder_sync_extension_enabled_;
 
     // proxy settings
     ProxyType use_proxy_type_;

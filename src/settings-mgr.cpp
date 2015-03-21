@@ -48,7 +48,6 @@ SettingsManager::SettingsManager()
       maxUploadRatio_(0),
       http_sync_enabled_(false),
       verify_http_sync_cert_disabled_(false),
-      finder_sync_extension_enabled_(false),
       use_proxy_type_(NoneProxy),
       proxy_port_(0)
 {
@@ -133,10 +132,6 @@ void SettingsManager::loadSettings()
 
 
     autoStart_ = get_seafile_auto_start();
-
-#ifdef HAVE_FINDER_SYNC_SUPPORT
-    finder_sync_extension_enabled_ = FinderSyncExtensionHelper::isEnabled();
-#endif
 }
 
 void SettingsManager::setAutoSync(bool auto_sync)
@@ -483,8 +478,11 @@ void SettingsManager::setLastShibUrl(const QString& url)
 }
 #endif // HAVE_SHIBBOLETH_SUPPORT
 
-
 #ifdef HAVE_FINDER_SYNC_SUPPORT
+bool SettingsManager::getFinderSyncExtension() const
+{
+    return FinderSyncExtensionHelper::isEnabled();
+}
 bool SettingsManager::getFinderSyncExtensionAvailable() const
 {
     bool installed = FinderSyncExtensionHelper::isInstalled();
@@ -502,6 +500,5 @@ void SettingsManager::setFinderSyncExtension(bool enabled)
         seafApplet->warningBox(tr("Unable to enable FinderSync Extension\n"));
         return;
     }
-    finder_sync_extension_enabled_ = enabled;
 }
 #endif
